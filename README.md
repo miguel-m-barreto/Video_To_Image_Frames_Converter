@@ -118,7 +118,7 @@ python video_converter.py input_video.mp4
 | `--frames_interval` | Extract every X frames | `--frames_interval 5` |
 | `--seconds_interval` | Extract every X seconds | `--seconds_interval 2` |
 | `--image_format` | Output format (`jpg`, `png`, `webp`, etc.) | `--image_format png` |
-| `--enable_lossless` | Extract frames in highest quality | `--enable_lossless` |
+| `--enable_lossless` | Convert video into lossless format for better quality and avoid corruption | `--enable_lossless` |
 | `--enable_timestamp_folder` | Save images in a timestamped folder | `--enable_timestamp_folder` |
 
 
