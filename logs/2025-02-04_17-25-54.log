@@ -1,0 +1,2 @@
+2025-02-04 17:25:55,389 - ERROR - FFmpeg failed to determine total frame count: 'builtin_function_or_method' object has no attribute 'floor'
+2025-02-04 17:26:07,039 - ERROR - Expected frames: 5304, frames processed: 5301, FPS: 25.0, Duration: 3 Minutes and 32 Seconds = 212.131066 seconds

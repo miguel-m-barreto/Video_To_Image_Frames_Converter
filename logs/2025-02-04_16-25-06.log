@@ -1,0 +1,2 @@
+2025-02-04 16:25:08,086 - INFO - Actual video duration determined: 218.85 seconds
+2025-02-04 16:25:20,053 - ERROR - Expected frames: 196573, frames processed: 6561, FPS: 29.97002997002997, Duration: 1 Hours, 49 Minutes and 18 Seconds = 6558.966633333333 seconds

@@ -1,0 +1,1 @@
+2025-02-04 16:07:08,589 - ERROR - FFmpeg failed to determine total frame count: cannot unpack non-iterable int object

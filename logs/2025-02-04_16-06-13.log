@@ -1,0 +1,3 @@
+2025-02-04 16:06:16,334 - INFO - Actual video duration determined: 218.85 seconds
+2025-02-04 16:06:16,334 - ERROR - FFmpeg failed to determine total frame count: cannot unpack non-iterable float object
+2025-02-04 16:06:26,918 - ERROR - Expected frames: 8043, frames processed: 6561, FPS: 29.97002997002997, Duration: 4 Minutes and 28 Seconds = 268.363175 seconds

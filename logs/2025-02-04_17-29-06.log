@@ -1,0 +1,2 @@
+2025-02-04 17:29:07,372 - ERROR - FFmpeg failed to determine total frame count: can't multiply sequence by non-int of type 'float'
+2025-02-04 17:29:19,983 - ERROR - Expected frames: 5304, frames processed: 5301, FPS: 25.0, Duration: 3 Minutes and 32 Seconds = 212.131066 seconds
