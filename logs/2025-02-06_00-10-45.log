@@ -1,0 +1,1 @@
+2025-02-06 00:10:45,256 - ERROR - FFmpeg error: Command '['ffmpeg', '-y', '-i', 'shrek_1.mp4', '-c:v', 'ffv1', '-level', '3', '-preset', 'veryslow', '-context', '1', '-g', '1', '-slices', '4', '-c:a', 'flac', 'shrek_1_lossless.mkv']' returned non-zero exit status 4294967294.

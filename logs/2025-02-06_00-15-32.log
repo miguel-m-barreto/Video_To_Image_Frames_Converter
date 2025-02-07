@@ -1,0 +1,4 @@
+2025-02-06 00:15:33,096 - ERROR - FFmpeg error: Command '['ffmpeg', '-y', '-i', 'shrek_1.mp4', '-c:v', 'ffv1', '-level', '3', '-preset', 'veryslow', '-context', '1', '-g', '1', '-slices', '4', '-c:a', 'flac', 'shrek_1_lossless.mkv']' returned non-zero exit status 4294967294.
+2025-02-06 00:15:33,510 - ERROR - Could not open video: shrek_1.mp4
+2025-02-06 00:15:33,511 - ERROR - FFmpeg failed to determine total frame count.
+2025-02-06 00:16:44,373 - INFO - Extraction Completed Successfuly! Expeected frames: 20000, Frames processed: 20000, FPS: 23.976023976023978, Duration: 13 Minutes and 54 Seconds = 834.1666666666666 seconds

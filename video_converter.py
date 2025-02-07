@@ -8,11 +8,15 @@ import datetime
 
 from utils import (
     format_time, find_video, get_unique_output_folder, get_timestamp_output_folder, 
-    get_existing_filenames, convert_video_to_lossless, get_video_duration, get_video_frame_count,supported_formats
+    round_floor_decimals, round_ceiling_decimals,
+    trim_video, convert_video_to_lossless, get_video_frame_count, supported_formats
 )
 
 supported_given_image_format = ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'tiff']
 
+"""
+SETUP LOGGING
+"""
 # Setup logging to store error messages
 log_folder = "logs"
 os.makedirs(log_folder, exist_ok=True)
@@ -31,8 +35,6 @@ logging.basicConfig(
 """
 AUXILIARY FUNCTIONS FOR VIDEO TO JPG CONVERSION
 """
-    
-
 # Get the video path
 def get_video_path(video_path):
     # If no video path is provided, search for it in the directory and subdirectories
@@ -50,7 +52,6 @@ def get_video_path(video_path):
 
     return video_path
 
-
 # Calculate the frame interval based on the FPS and seconds interval
 # Ensure the frame interval is at least 1
 # get's interval type based on the provided interval
@@ -62,8 +63,10 @@ def get_interval_type(given_frames_interval, given_seconds_interval, fps):
         return given_frames_interval, f"{given_frames_interval}_frames_interval"
     else:
         return given_frames_interval, f"{given_frames_interval}_given_frame_interval"
-    
 
+# Get the output folder path
+# If no output folder is provided, create a folder in the current directory
+# If timestamps are enabled create a timestamped folder inside the default location
 def get_output_folder(output_folder, video_name, interval_type, enable_timestamp_folder):
     if output_folder is None:
         if not os.path.exists(os.path.join(os.getcwd(), "Video_converter_Folder")):
@@ -95,50 +98,46 @@ def get_output_folder(output_folder, video_name, interval_type, enable_timestamp
         else:
             return get_unique_output_folder(output_folder) or output_folder  # Ensure a valid folder path
 
-
 # Set the start_time and end_time frame based on the provided frame number or time
 # Default to the start_time of the video if the provided start_time frame or time exceeds the video duration
-# Default to the end_time of the video if the provided end_time frame or time exceeds the video duration 
-def get_start_end(given_start_frame, given_start_time, 
-              given_end_frame, given_end_time,
+def get_start(given_start_frame, given_start_time, 
               frame_count, fps, dur):
     """Set the start_time frame based on the provided frame number or time."""
     start_time = 0
-    end_time = dur
 
     if given_start_time is not None:
         if given_start_time > dur:
-            print(f"start_time time {given_start_time}s exceeds video duration. Total time in video: {dur}s")
-            print("Defaulting to start_time of video.")
+            print(f"start_time time {given_start_time}s exceeds video duration. Total time in video: {dur}s, defaulting to start time of video.")
         else:
             start_time = given_start_time
+
     elif given_start_frame is not None:
         if given_start_frame > frame_count:
-            print(f"start_time frame {given_start_frame} exceeds total frames. Total frames in video: {frame_count}")
-            print("Defaulting to start_time of video.")
+            print(f"start_time frame {given_start_frame} exceeds total frames. Total frames in video: {frame_count}, defaulting to the first frame of video.")
         else:
             start_time = given_start_frame / fps
 
+    return start_time
+
+# Default to the end_time of the video if the provided end_time frame or time exceeds the video duration 
+def get_end(given_end_frame, given_end_time,
+              frame_count, fps, dur):
+    """Set the end_time frame based on the provided frame number or time."""
+    end_time = dur
+
     if given_end_time is not None:
         if given_end_time > dur:
-            print(f"end_time time {given_end_time}s exceeds video duration. Total time in video: {dur}s")
-            print("Defaulting to end_time of video.")
+            print(f"end_time time {given_end_time}s exceeds video duration. Total time in video: {dur}s, defaulting to end time of video.")
         else:
             end_time = given_end_time
+
     elif given_end_frame is not None:
         if given_end_frame > frame_count:
-            print(f"end_time frame {given_end_frame} exceeds total frames. Total frames in video: {frame_count}")
-            print("Defaulting to end_time of video.")
+            print(f"end_time frame {given_end_frame} exceeds total frames. Total frames in video: {frame_count}, defaulting to end time of video.")
         else:
             end_time = given_end_frame / fps
 
-    # Swap start_time and end_time if start_time is greater than end_time
-    if start_time > end_time:
-        print("Warning: start_time time is greater than end_time time. Swapping start_time and end_time.")
-        start_time, end_time = end_time, start_time
-
-    return start_time, end_time
-
+    return end_time
 
 """
 MAIN FUNCTION FOR VIDEO TO IMAGES CONVERSION
@@ -155,6 +154,9 @@ def video_converter(video_path, output_folder=None,
     Converts a video into a sequence of JPG frames, skipping already existing frames.
     Provides estimated time completion.
     """ 
+
+    start_exec = time.time()
+
     logs_folder = os.path.join(os.getcwd(), "logs")
 
     if logs_folder is None:
@@ -172,10 +174,6 @@ def video_converter(video_path, output_folder=None,
         print("Unsupported video format.")
         return
 
-    # Convert video to lossless format
-    if enable_lossless:
-        video_path = convert_video_to_lossless(video_path)
-
     # Check if the image exists in the supported image formats
     if given_image_format is None:
         given_image_format = "jpg"
@@ -184,20 +182,64 @@ def video_converter(video_path, output_folder=None,
         logging.error("Unsupported image format.")
         return
 
-    # Extract video name without extension
-    video_name = os.path.splitext(os.path.basename(video_path))[0]   
-
     dur, frame_count, fps = get_video_frame_count(video_path)
-    print("-----------------------------")
-    print(f"Expected video duration: {format_time(dur)} = {dur} seconds")
-    print(f"Total frames in video: {frame_count}")
-    print(f"Video FPS: {fps:.2f}")
-    print("-----------------------------")
+
+    if dur < 0 or frame_count < 0 or fps < 0:
+        print("Error: Invalid video properties.")
+        logging.error("Invalid video properties.")
+        return
+    
+    # TO DELETE: this print
+    # Print video duration, frame count, and FPS
+    print("-----------------------------"
+        f"\nTotal video duration: {format_time(dur)} = {dur} seconds"
+        f"\nTotal frames in video: {frame_count}" 
+        f"\nVideo FPS: {fps:.3f}")
 
     interval, interval_type = get_interval_type(given_frames_interval, given_seconds_interval, fps)
 
     # Set the start_time frame based on the provided frame number or time
-    start_time, end_time = get_start_end(given_start_frame, given_start_time, given_end_frame, given_end_time, frame_count, fps, dur)
+    start_time = get_start(given_start_frame, given_start_time, frame_count, fps, dur)
+    end_time = get_end(given_end_frame, given_end_time, frame_count, fps, dur)
+
+    # Swap start_time and end_time if start_time is greater than end_time
+    if start_time == end_time:
+        print("Warning: start_time time is equal to end_time time. \nDefaulting to start of the video.")
+        start_time = 0
+    elif start_time > end_time:
+        print("Warning: start_time time is greater than end_time time. \nSwapping start_time and end_time.")
+        start_time, end_time = end_time, start_time
+
+    remaining_frames = max(frame_count, math.ceil(((end_time - start_time) * round_ceiling_decimals(fps, 2)) / interval))
+
+    if start_time > 0 or end_time < dur:
+        # Trim the video to the specified start_time and end_time
+        trim_time = time.time()
+        print("-----------------------------"
+            f"\nTrimming video from {video_path}")
+        print(f"Trimming video from {start_time} to {end_time} seconds.")            
+        video_path = trim_video(video_path, start_time, end_time)
+        print(f"Trimmed video saved: {video_path}")
+        
+        dur, frame_count, fps = get_video_frame_count(video_path)
+
+        # TO DELETE: this print
+        # Print video duration, frame count, and FPS
+        elapsed_trim_time = time.time() - trim_time
+        print("-----------------------------"
+            f"\nTrimmed video duration: {format_time(dur)} = {dur} seconds"
+            f"\nTrimmed frames in video: {frame_count}" 
+            f"\nVideo FPS: {fps:.3f}"
+            f"\nTrimming time taken: {format_time(elapsed_trim_time)}")
+        
+        remaining_frames = frame_count
+
+    # Convert video to lossless format
+    if enable_lossless:
+        video_path = convert_video_to_lossless(video_path)
+
+    # Extract video name without extension
+    video_name = os.path.splitext(os.path.basename(video_path))[0]
 
     # Get the output folder path
     output_folder = get_output_folder(output_folder, video_name, interval_type, enable_timestamp_folder)
@@ -205,7 +247,7 @@ def video_converter(video_path, output_folder=None,
     os.makedirs(output_folder, exist_ok=True)
     
     # Preload existing frame filenames into a set
-    existing_files = get_existing_filenames(output_folder) if not disable_checking_existing_frames else set()
+    #existing_files = get_existing_filenames(output_folder) if not disable_checking_existing_frames else set()
 
     # Define FFmpeg filter for frame extraction
     # Extract frames at the specified interval, or at the exact FPS rate
@@ -230,43 +272,65 @@ def video_converter(video_path, output_folder=None,
     #end_option = f"-to {end_time}"
     
     output_pattern = os.path.join(output_folder, f"frame_%04d.{given_image_format}")
-
-    start_option = f"{start_time}"
-    end_option = f"{end_time-start_time}"
-
+    
     # FFmpeg Command (Fully Replaces OpenCV)
     #command = f'ffmpeg -y {start_option} -i "{video_path}" {end_option} -vsync vfr -vf "{fps_filter}" "{output_pattern}"'
+    command = ["ffmpeg", "-y", "-accurate_seek"]
+    if not disable_checking_existing_frames:
+        command.append("-n")
+    
+    command.extend(["-i", video_path, "-fps_mode", "passthrough", "-vf", fps_filter,])
+
     if given_image_format == "png":
-        command = [
-        "ffmpeg", "-y", "-ss", start_option, "-t", end_option, "-i", video_path,
-        "-fps_mode", "passthrough", "-vf", fps_filter, "-compression_level", "100", output_pattern
-    ]
+        command.extend(["-compression_level", "100"])
     else:
-        command = [
-        "ffmpeg", "-y", "-ss", start_option, "-t", end_option, "-i", video_path,
-        "-fps_mode", "passthrough", "-vf", fps_filter, "-q:v", "1", "-vsync", "vfr",
-        "-pix_fmt", "yuvj420p", output_pattern
-    ]   
+        command.extend(["-q:v", "1", "-vsync", "vfr", "-pix_fmt", "yuvj420p"])
+    
+    command.append(output_pattern)
 
-    start_exec = time.time()
+    """ 
+    if given_image_format == "png":
+            command = [
+                "ffmpeg", "-y", "-i", video_path,
+                "-fps_mode", "passthrough", "-vf", fps_filter, "-compression_level", "100", output_pattern
+            ]
+        #else:
+            command = [
+                "ffmpeg", "-y", "-i", video_path,
+                "-fps_mode", "passthrough", "-vf", fps_filter, "-q:v", "1", "-vsync", "vfr",
+                "-pix_fmt", "yuvj420p", output_pattern
+            ]
+    else:
+        if given_image_format == "png":
+                command = [
+                    "ffmpeg", "-y", "-n", "-i", video_path,
+                    "-fps_mode", "passthrough", "-vf", fps_filter, "-compression_level", "100", output_pattern
+                ]
+        else:
+                command = [
+                    "ffmpeg", "-y", "-n", "-i", video_path,
+                    "-fps_mode", "passthrough", "-vf", fps_filter, "-q:v", "1", "-vsync", "vfr",
+                    "-pix_fmt", "yuvj420p", output_pattern
+                ]
+    """
 
-    remaining_frames = max(1, math.ceil(((end_time - start_time)*fps) / interval))
-    print(f"Total frames to process: {remaining_frames}")
-    print(f"Last frame: {int(end_time*fps)}")   
-    print(f"start_time time: {start_time}")
-    print(f"end_time time: {end_time}")
-    print(f"Video time to process to images: {format_time(end_time - start_time)}")
+    # TO DELETE: this print
+    # Print information about the video extraction
+    print("-----------------------------"
+        f"\nFrames to process: {remaining_frames}"
+        f"\nStart_time time: {start_time}"
+        f"\nEnd_time time: {end_time}"
+        f"\nVideo time to process to images: {format_time(end_time - start_time)}")
 
+    start_ffmpeg_time = time.time()
     try:
+        print(f"{command}")
         print("Running FFmpeg command...")
         result = subprocess.run(command, capture_output=True, text=True)
-
         if result.returncode != 0:
             print(f"FFmpeg error: {result.stderr}")
             logging.error(f"FFmpeg error: {result.stderr}")
             return
-        else:
-            print(f"Frames extracted to: {output_folder}")
     except subprocess.CalledProcessError as e:
         logging.error(f"FFmpeg frame extraction failed: {e}")
         print("Error: FFmpeg frame extraction failed.")
@@ -274,19 +338,27 @@ def video_converter(video_path, output_folder=None,
     # Count saved frames
     processed_frames = len([f for f in os.listdir(output_folder) if f.endswith(given_image_format)])
     elapsed_time = time.time() - start_exec
+    elapsed_time_ffmpeg = time.time() - start_ffmpeg_time
 
-    print("-----------------------------")
-    print("Extraction Ended!")
-    print(f"Saved frames in {output_folder} with an interval of {interval_type}.")
-    print(f"Total time taken: {format_time(elapsed_time)}")
-    print(f"FPS: {processed_frames / elapsed_time:.2f}")
+    # TO DELETE: this print
+    # Print final message, including the time taken and FPS, and log the results to a file
+    print("-----------------------------"
+        f"\nExtraction Ended!"
+        f"\nSaved frames in {output_folder} with an interval of {interval_type}."
+        f"\nTotal time taken: {format_time(elapsed_time)}"
+        f"\nFFmpeg time taken: {format_time(elapsed_time_ffmpeg)}"
+        f"\nFPS: {processed_frames / elapsed_time:.2f}" 
+        "\n-----------------------------")
 
     if processed_frames != remaining_frames:
         logging.error(f"Expected frames: {remaining_frames}, frames processed: {processed_frames}, FPS: {fps}, Duration: {format_time(end_time - start_time)} = {end_time - start_time} seconds")
-        print(f"ERROR: Expected frames: {remaining_frames}, frames processed: {processed_frames}, FPS: {fps}, Duration: {format_time(end_time - start_time)} = {end_time - start_time} seconds")
+        print(f"ERROR: Expected frames: {remaining_frames}, frames processed: {processed_frames} \nFPS: {fps}, Duration: {format_time(end_time - start_time)} = {end_time - start_time} seconds")
     else:
         logging.info(f"Extraction Completed Successfuly! Expeected frames: {remaining_frames}, Frames processed: {processed_frames}, FPS: {fps}, Duration: {format_time(end_time - start_time)} = {end_time - start_time} seconds")
-        print(f"Extraction Completed Successfuly! Expeected frames: {remaining_frames}, Frames processed: {processed_frames}, FPS: {fps}, Duration: {format_time(end_time - start_time)} = {end_time - start_time} seconds")
+        print(f"Extraction Completed Successfuly! \nExpected frames: {remaining_frames}, Frames processed: {processed_frames} \nFPS: {fps}, Duration: {format_time(end_time - start_time)} = {end_time - start_time} seconds")
+
+    print(f"Log file: {log_path}" 
+        "\n-----------------------------")
 
 # Command-line interface
 # Extract frames from a video and save as JPEG images
@@ -309,60 +381,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     video_converter(args.video, args.output_folder, args.start_frame, args.end_frame, args.start_time, args.end_time, args.frames_interval, args.seconds_interval, args.enable_lossless, args.disable_checking_existing_frames, args.enable_timestamp_folder, args.image_format)
-
-"""
-    Converts a video into a sequence of JPG frames.
-    
----------
-
-    Function calling with optional parameters:
-    
-    Examples:
-    
-    video_converter('input_video.mp4', 'output_frames_folder', start_time=10, end_time=30, frames_interval=5)
-
-    video_converter('input_video.mp4', 'output_frames_folder', start_time=10, end_time=30)
-    
-    video_converter('input_video.mp4', 'output_frames_folder', start_time=10)
-    
-    video_converter('input_video.mp4', 'output_frames_folder', end_time=30)
-    
-    video_converter('input_video.mp4', 'output_frames_folder')
-
-    video_converter('input_video.mp4')
-    
-    video_converter('input_video.mp4', 'output_frames_folder', frames_interval=5)
-    
-    video_converter('input_video.mp4', 'output_frames_folder', start_time=10, frames_interval=5)
-    
-    video_converter('input_video.mp4', 'output_frames_folder', end_time=30, frames_interval=5)
-
----------
-
-    if you are using cmd
-    
-    Function calling with optional parameters:
-    
-    Examples:
-    
-    python video_converter.py input_video.mp4 --output_folder output_frames --start_time 10 --end_time 30 --frames_interval 5
-    
-    python video_converter.py input_video.mp4 --output_folder output_frames --start_time 10 --end_time 30
-    
-    python video_converter.py input_video.mp4 --output_folder output_frames --start_time 10
-    
-    python video_converter.py input_video.mp4 --output_folder output_frames --end_time 30
-
-    python video_converter.py input_video.mp4 --output_folder output_frames
-
-    python video_converter.py input_video.mp4
-
-    python video_converter.py input_video.mp4 --frames_interval 5
-    
-    python video_converter.py input_video.mp4 --output_folder output_frames --frames_interval 5
-    
-    python video_converter.py input_video.mp4 --output_folder output_frames --start_time 10 --frames_interval 5
-    
-    python video_converter.py input_video.mp4 --output_folder output_frames --end_time 30 --frames_interval 5
-    
-"""

@@ -90,6 +90,92 @@ def is_ffmpeg_installed():
         return False
     
 
+def trim_video(video_path, start_time=0, end_time=None, quality="fast"):
+    """Trims video using FFmpeg's fast `-c copy` mode."""
+    if not is_ffmpeg_installed():
+            print("Error: FFmpeg is not installed.")
+            print("Please install FFmpeg to enable lossless conversion.")
+            logging.error("FFmpeg is not installed.")
+            return video_path # Return the original video path if FFmpeg is not installed
+    
+    output_folder = os.path.dirname(video_path)
+    trimmed_video = os.path.join(output_folder, f"{os.path.splitext(os.path.basename(video_path))[0]}_trimmed_{start_time}-{end_time}.mp4")
+
+    
+    if os.path.exists(trimmed_video):
+        duration, _, _  = get_video_frame_count(trimmed_video)
+
+        if duration < end_time - start_time:
+            print(f"Trimmed video already exists: {trimmed_video} but has incorrect duration: {duration}")
+            logging.error(f"Trimmed video already exists: {trimmed_video} but has incorrect duration: {duration}")
+            os.remove(trimmed_video)  # Remove incorrect video
+        else:
+            return trimmed_video  # Avoid re-trimming
+
+    # Construct FFmpeg command
+    command = ["ffmpeg", "-y", "-ss", str(start_time), "-to", str(end_time), "-i", video_path]
+
+    if quality == "lossless":
+        # 100% lossless trimming
+        command.extend(["-c:v", "ffv1", "-level", "3", "-preset", "veryslow", "-c:a", "flac"])
+    elif quality == "best":
+        # High quality with H.264
+        command.extend(["-c:v", "libx264", "-crf", "18", "-preset", "slow", "-c:a", "flac"])
+    elif quality == "good":
+        # Default to high efficiency (H.265)
+        command.extend(["-c:v", "libx265", "-crf", "18", "-preset", "slow", "-c:a", "aac", "-b:a", "320k"])
+    else:
+        # Fastest mode with copy
+        command.extend(["-c", "copy", "-avoid_negative_ts", "make_zero"])
+        
+    """
+    command = [
+        "ffmpeg", "-y", "-i", video_path, "-ss", str(start_time)
+    ]
+
+    if end_time:
+        command.extend(["-to", str(end_time)])
+
+    if quality == "good":
+        # Good quality with x264 and FLAC audio
+        # Recommended for high-quality videos with moderate file sizes
+        command.extend(["-c:v", "libx264", "-crf", "18", "-preset", "slow", "-c:a", "flac"])
+        # ffmpeg -y -i input.mp4 -ss 10 -to 30 -c:v libx264 -crf 18 -preset slow -c:a flac output.mp4
+    elif quality == "lossless":
+        # Lossless quality with FFV1 and FLAC audio
+        # Recommended for archival purposes with large file sizes
+        command.extend(["-c:v", "ffv1", "-level", "3", "-preset", "veryslow", "-c:a", "flac"])
+        # -c:v ffv1 -level 3 -preset veryslow -c:a flac output.mkv
+    else:
+        # Best compression with x265 (HEVC) and AAC audio
+        # Recommended for smaller file sizes with good quality
+        command.extend(["-c:v", "libx265", "-crf", "18", "-preset", "slow", "-c:a", "aac", "-b:a", "320k"])
+        # ffmpeg -y -i input.mp4 -ss 10 -to 30 -c:v libx265 -crf 18 -preset slow -c:a aac -b:a 320k output.mp4
+    """
+    command.append(trimmed_video)
+
+    print(f"{command}")
+
+    print(f"Executing: {' '.join(command)}")  # Debug output
+
+    try:
+        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"FFmpeg Error: {e.stderr}")  # Show FFmpeg errors
+        return video_path  # Fallback to original
+    """
+    subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+    """
+    return trimmed_video if os.path.exists(trimmed_video) else video_path
+ 
+
+# Convert a video to a lossless format using FFmpeg after trimming
+def trim_and_convert_lossless(video_path, start_time=0, end_time=None):
+    """Trims and converts video to lossless format using FFmpeg."""
+    trimmed_video = trim_video(video_path, start_time, end_time)
+    return convert_video_to_lossless(trimmed_video)
+
+
     # Convert a video to a lossless format using FFmpeg
 def convert_video_to_lossless(video_path):
     """Converts the video to a high-quality lossless format using FFmpeg and saves it in the same folder as the original video."""
@@ -109,12 +195,14 @@ def convert_video_to_lossless(video_path):
 
     try:
         print(f"Converting {video_path} to lossless format...")
+        
         command = [
             "ffmpeg", "-y", "-i", video_path,
             "-c:v", "ffv1", "-level", "3", "-preset", "veryslow",
             "-context", "1", "-g", "1", "-slices", "4",
             "-c:a", "flac", output_video
         ]
+
         subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
 
         if os.path.exists(output_video):
@@ -123,12 +211,15 @@ def convert_video_to_lossless(video_path):
             return output_video
         else:
             raise ValueError("FFmpeg did not produce a valid output file.")
+        
     except subprocess.CalledProcessError as e:
         logging.error(f"FFmpeg error: {e}")
         print("Error: FFmpeg conversion failed. Using original video.")
     except Exception as e:
         logging.error(f"Unexpected error in FFmpeg conversion: {e}")
         print("Error: Unexpected issue with FFmpeg conversion.")
+    
+
 
     return video_path  # Return the original video path if conversion fails
 
@@ -187,7 +278,7 @@ def get_actual_video_duration_OpenCV_FallBack(video_path):
             #stop if frame is None
             # this is a workaround for corrupted video files
             # where OpenCV fails to read the frame
-            break 
+            break
 
         timestamp = frame_idx / fps  # Convert frames to time
         frame_idx += 1
@@ -195,9 +286,13 @@ def get_actual_video_duration_OpenCV_FallBack(video_path):
     print(f"Frame index: {frame_idx}")
     print(f"FPS: {fps}")
     print(f"Timestamp: {timestamp}")
+    # Round to 3 decimal places, as OpenCV may have slight inaccuracies in timestamps
+    # due to floating-point precision issues in frame timestamps (e.g., 0.9999999999999999)
+    # This ensures that the timestamp is rounded to the nearest millisecond
     max_pts_time = round_floor_decimals(max(max_pts_time, timestamp), time_decimal_places) # Round to 3 decimal places
     cap.release()
     
+    """
     if frame_idx > math.ceil(max_pts_time * fps):
         frame_idx = max_pts_time * fps
         return max_pts_time, math.ceil(frame_idx)
@@ -205,14 +300,13 @@ def get_actual_video_duration_OpenCV_FallBack(video_path):
     elif frame_idx < math.ceil(max_pts_time * fps):
         max_pts_time = frame_idx / fps
         return max_pts_time, math.ceil(frame_idx)
+        """
 
-    logging.info(f"Actual video duration determined: {max_pts_time:.2f} seconds")
     return max_pts_time, frame_idx  # Ensure both values are returned
 
 
-
+"""Gets the total number of frames in a video using FFmpeg's ffprobe."""
 def get_video_frame_count(video_path):
-    """Gets the total number of frames in a video using FFmpeg's ffprobe."""
     print(f"Getting frame count for {video_path}...")
     try:
         duration = get_video_duration(video_path)
@@ -265,8 +359,8 @@ def get_video_frame_count(video_path):
         return duration, -1, fps  # Return -1 if failed
 
 
+"""Gets the total duration of a video in seconds using FFmpeg's ffprobe."""
 def get_video_duration(video_path):
-    """Gets the total duration of a video in seconds using FFmpeg's ffprobe."""
     try:
         cmd = [
             "ffprobe", "-v", "error", "-select_streams", "v:0",

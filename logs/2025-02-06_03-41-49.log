@@ -1,0 +1,10 @@
+2025-02-06 03:41:49,506 - ERROR - FFmpeg error: Command '['ffmpeg', '-y', '-ss', '0', '-i', 'never_gonna_give_you_up.mp4', '-c:v', 'ffv1', '-level', '3', '-preset', 'veryslow', '-context', '1', '-g', '1', '-slices', '4', '-c:a', 'flac', 'never_gonna_give_you_up_lossless.mkv']' returned non-zero exit status 4294967294.
+2025-02-06 03:41:49,640 - ERROR - FFmpeg error: Command '['ffmpeg', '-y', '-ss', '0', '-i', 'shrek_1.mp4', '-c:v', 'ffv1', '-level', '3', '-preset', 'veryslow', '-context', '1', '-g', '1', '-slices', '4', '-c:a', 'flac', 'shrek_1_lossless.mkv']' returned non-zero exit status 4294967294.
+2025-02-06 03:41:49,778 - ERROR - FFmpeg error: Command '['ffmpeg', '-y', '-ss', '0', '-i', 'agata_sai.mp4', '-c:v', 'ffv1', '-level', '3', '-preset', 'veryslow', '-context', '1', '-g', '1', '-slices', '4', '-c:a', 'flac', 'agata_sai_lossless.mkv']' returned non-zero exit status 4294967294.
+2025-02-06 03:41:49,913 - ERROR - FFmpeg error: Command '['ffmpeg', '-y', '-ss', '0', '-t', '900', '-i', 'shrek_1.mp4', '-c:v', 'ffv1', '-level', '3', '-preset', 'veryslow', '-context', '1', '-g', '1', '-slices', '4', '-c:a', 'flac', 'shrek_1_lossless.mkv']' returned non-zero exit status 4294967294.
+2025-02-06 03:41:50,195 - ERROR - Could not open video: never_gonna_give_you_up.mp4
+2025-02-06 03:41:50,195 - ERROR - FFmpeg failed to determine total frame count.
+2025-02-06 03:41:50,430 - ERROR - Could not open video: shrek_1.mp4
+2025-02-06 03:41:50,431 - ERROR - FFmpeg failed to determine total frame count.
+2025-02-06 03:41:50,655 - ERROR - Could not open video: agata_sai.mp4
+2025-02-06 03:41:50,655 - ERROR - FFmpeg failed to determine total frame count.

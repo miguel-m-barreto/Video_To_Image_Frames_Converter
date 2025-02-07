@@ -1,0 +1,3 @@
+2025-02-06 13:49:57,504 - ERROR - Could not open video: shrek_1_trimmed_0-100.mp4
+2025-02-06 13:49:57,504 - ERROR - FFmpeg failed to determine total frame count.
+2025-02-06 13:49:57,505 - ERROR - Trimmed video already exists: shrek_1_trimmed_0-100.mp4 but has incorrect duration: -1
