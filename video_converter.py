@@ -14,6 +14,8 @@ from utils import (
 
 supported_given_image_format = ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'tiff']
 
+DEFAULT_OUTPUT_FOLDER = "Video_converter_Folder"
+
 """
 SETUP LOGGING
 """
@@ -69,8 +71,8 @@ def get_interval_type(given_frames_interval, given_seconds_interval, fps):
 # If timestamps are enabled create a timestamped folder inside the default location
 def get_output_folder(output_folder, video_name, interval_type, enable_timestamp_folder):
     if output_folder is None:
-        if not os.path.exists(os.path.join(os.getcwd(), "Video_converter_Folder")):
-                os.makedirs(os.path.join(os.getcwd(), "Video_converter_Folder"), exist_ok=True)
+        if not os.path.exists(os.path.join(os.getcwd(), DEFAULT_OUTPUT_FOLDER)):
+                os.makedirs(os.path.join(os.getcwd(), DEFAULT_OUTPUT_FOLDER), exist_ok=True)
     else:
         if not os.path.exists(output_folder):
             os.makedirs(output_folder, exist_ok=True)
@@ -81,7 +83,7 @@ def get_output_folder(output_folder, video_name, interval_type, enable_timestamp
             return get_timestamp_output_folder(
                 os.path.join(
                     os.getcwd(), 
-                    "Video_converter_Folder", 
+                    DEFAULT_OUTPUT_FOLDER, 
                     f"{video_name}_frames_{interval_type}"))
         else:
             # If an output folder is provided, create a timestamped subfolder inside it
@@ -91,7 +93,7 @@ def get_output_folder(output_folder, video_name, interval_type, enable_timestamp
         if output_folder is None:
             base_output_folder = os.path.join(
                 os.getcwd(),
-                "Video_converter_Folder",
+                DEFAULT_OUTPUT_FOLDER,
                 f"{video_name}_frames_{interval_type}"
             )
             return get_unique_output_folder(base_output_folder) or base_output_folder  # Ensure a valid folder path

@@ -183,6 +183,7 @@ Copyright (C) 2025 Miguel Matos Barreto
 
 ## **Acknowledgments**
 - Built using **OpenCV, FFmpeg, and Python**.
+- By using this software, you acknowledge that you have read, understood, and agreed to all the terms outlined in this license.
 
 ---
 

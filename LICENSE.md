@@ -1,6 +1,6 @@
 # Custom License for Video to Image Frames Converter
 
-Copyright (C) 2025 Miguel Matos Barreto  
+**Copyright (C) 2025 Miguel Matos Barreto**
 
 ---
 
@@ -41,6 +41,7 @@ By using this software, you agree to the following terms:
 
 ## **4. Special Permissions & Contact**  
 - If you require **special permissions** (e.g., redistribution, modifications, or integration into another software), please **contact the author** to request explicit approval.  
+***[Check README for contact info]***
 
 ---
 
